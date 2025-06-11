@@ -20,6 +20,7 @@ function isAll(obj: any): obj is All {
  * - If `rule` is a single condition, evaluates it using `evaluateSingleCondition`.
  * - If `rule` is an "any" group, returns `true` if any sub-rule is satisfied.
  * - If `rule` is an "all" group, returns `true` only if all sub-rules are satisfied.
+ * - If `rule.not` is `true`, the result will be negated.
  *
  * @param rule - The rule or condition to evaluate.
  * @param row - The data object or array of objects to evaluate the rule against.
@@ -36,17 +37,24 @@ export function evaluateCondition(
 
     if (typeof row !== 'object') throw new Error('Row must be an object or an array of objects');
 
+    let result: boolean;
     switch (true) {
         case Array.isArray(row) && row.length === 0:
-            return false; // Empty array, no rows to evaluate
+            result = false;
+            break;
         case Array.isArray(row):
-            // If row is an array, evaluate each row against the rule
-            return row.some((r) => evaluateCondition(rule, r, context));
+            result = row.some((r) => evaluateCondition(rule, r, context));
+            break;
         case typeof row === 'object' && !Array.isArray(row):
-            return evaluateRuleForRowObject(row, rule, context);
+            result = evaluateRuleForRowObject(row, rule, context);
+            break;
         default:
-            return false;
+            result = false;
     }
+
+    if ('not' in rule && rule.not) return !result;
+
+    return result;
 }
 
 /**
@@ -67,13 +75,16 @@ function evaluateRuleForRowObject(
     rule: Rule | Condition,
     context: anyObject,
 ): boolean {
-    if (isCondition(rule)) return evaluateSingleCondition(rule, row);
-
-    if (isAny(rule)) return rule.any.some((subRule) => evaluateCondition(subRule, row, context));
-
-    if (isAll(rule)) return rule.all.every((subRule) => evaluateCondition(subRule, row, context));
-
-    return false;
+    switch (true) {
+        case isCondition(rule):
+            return evaluateSingleCondition(rule, row);
+        case isAny(rule):
+            return rule.any.some((subRule) => evaluateCondition(subRule, row, context));
+        case isAll(rule):
+            return rule.all.every((subRule) => evaluateCondition(subRule, row, context));
+        default:
+            return false;
+    }
 }
 
 /**

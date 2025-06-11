@@ -138,4 +138,46 @@ describe('evaluateCondition', () => {
         const row = {};
         expect(evaluateCondition(rule, row)).toBe(false);
     });
+
+    it('should invert result with not property on single condition', () => {
+        const rule: any = { ...{ field: 'age', operator: 'equals', value: 30 }, not: true };
+        const row = { age: 30 };
+        expect(evaluateCondition(rule as any, row)).toBe(false);
+    });
+
+    it('should invert result with not property on any group', () => {
+        const rule: Rule = {
+            any: [
+                { field: 'age', operator: 'equals', value: 20 },
+                { field: 'age', operator: 'equals', value: 30 },
+            ],
+            not: true,
+        };
+        const row = { age: 30 };
+        expect(evaluateCondition(rule, row)).toBe(false);
+    });
+
+    it('should invert result with not property on all group', () => {
+        const rule: Rule = {
+            all: [
+                { field: 'age', operator: 'equals', value: 30 },
+                { field: 'status', operator: 'equals', value: 'active' },
+            ],
+            not: true,
+        };
+        const row = { age: 30, status: 'active' };
+        expect(evaluateCondition(rule, row)).toBe(false);
+    });
+
+    it('should return true for not property on any group with empty array', () => {
+        const rule: Rule = { any: [], not: true };
+        const row = { age: 30 };
+        expect(evaluateCondition(rule, row)).toBe(true);
+    });
+
+    it('should return false for not property on all group with empty array', () => {
+        const rule: Rule = { all: [], not: true };
+        const row = { age: 30 };
+        expect(evaluateCondition(rule, row)).toBe(false);
+    });
 });
