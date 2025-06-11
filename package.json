@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "description": "A library for rendering rules in TypeScript",
     "license": "ISC",
-    "author": "",
+    "author": "Aimidy Lin <zoe52888@gmail.com> (https://github.com/aimidy)",
     "type": "commonjs",
     "main": "index.js",
     "module": "./dist/index.mjs",
