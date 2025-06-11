@@ -1,6 +1,6 @@
 {
     "name": "@aimidy/render-rules",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "A library for rendering rules in TypeScript",
     "license": "ISC",
     "author": "Aimidy Lin <zoe52888@gmail.com> (https://github.com/aimidy)",
