@@ -119,6 +119,15 @@ function evaluateRuleForRowObject(
  * - 'endsWith': Checks if the field value (string) ends with the condition value.
  * - 'in': Checks if the field value is included in the condition value (array).
  * - 'notIn': Checks if the field value is not included in the condition value (array).
+ * Date/time operators:
+ * - 'dateEquals': Checks if the field value (date) is equal to the condition value (date).
+ * - 'dateNotEquals': Checks if the field value (date) is not equal to the condition value (date).
+ * - 'dateAfter': Checks if the field value (date) is after the condition value (date).
+ * - 'dateBefore': Checks if the field value (date) is before the condition value (date).
+ * - 'dateOnOrAfter': Checks if the field value (date) is on or after the condition value (date).
+ * - 'dateOnOrBefore': Checks if the field value (date) is on or before the condition value (date).
+ * - 'nowAfterPlusMinutes': Checks if the current time is after the field value (date) plus the condition value (minutes).
+ * - 'nowBeforePlusMinutes': Checks if the current time is before the field value (date) plus the condition value (minutes).
  */
 function evaluateSingleCondition(condition: Condition, row: anyObject): boolean {
     const { field, operator, value } = condition;
@@ -189,7 +198,6 @@ function evaluateSingleCondition(condition: Condition, row: anyObject): boolean 
             const compareTs = base.getTime() + value * 60_000;
             return Date.now() < compareTs;
         }
-        // ---- 新增結束 ----
         default:
             throw new Error(`Unknown operator: ${operator}`);
     }
