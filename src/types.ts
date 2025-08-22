@@ -26,6 +26,15 @@ export type Operator =
     | 'startsWith'
     | 'endsWith'
     | 'in'
-    | 'notIn';
+    | 'notIn'
+    // 日期 / 時間新增:
+    | 'dateEquals'
+    | 'dateNotEquals'
+    | 'dateAfter'
+    | 'dateBefore'
+    | 'dateOnOrAfter'
+    | 'dateOnOrBefore'
+    | 'nowAfterPlusMinutes'
+    | 'nowBeforePlusMinutes';
 
 export type anyObject = Record<string, any>;

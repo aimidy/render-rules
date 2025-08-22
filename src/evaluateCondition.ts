@@ -1,5 +1,18 @@
 import { All, Any, anyObject, Condition, Rule } from './types';
 
+function toDate(input: any): Date | null {
+    if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+    if (typeof input === 'number') {
+        const d = new Date(input);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    if (typeof input === 'string') {
+        const d = new Date(input);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+}
+
 function isCondition(obj: any): obj is Condition {
     return obj && typeof obj === 'object' && 'field' in obj && 'operator' in obj && 'value' in obj;
 }
@@ -130,6 +143,53 @@ function evaluateSingleCondition(condition: Condition, row: anyObject): boolean 
             return Array.isArray(value) && value.includes(rowValue);
         case 'notIn':
             return Array.isArray(value) && !value.includes(rowValue);
+        // ---- 日期 / 時間判斷新增 ----
+        case 'dateEquals': {
+            const d1 = toDate(rowValue);
+            const d2 = toDate(value);
+            return !!(d1 && d2 && d1.getTime() === d2.getTime());
+        }
+        case 'dateNotEquals': {
+            const d1 = toDate(rowValue);
+            const d2 = toDate(value);
+            return !!(d1 && d2 && d1.getTime() !== d2.getTime());
+        }
+        case 'dateAfter': {
+            const d1 = toDate(rowValue);
+            const d2 = toDate(value);
+            return !!(d1 && d2 && d1.getTime() > d2.getTime());
+        }
+        case 'dateBefore': {
+            const d1 = toDate(rowValue);
+            const d2 = toDate(value);
+            return !!(d1 && d2 && d1.getTime() < d2.getTime());
+        }
+        case 'dateOnOrAfter': {
+            const d1 = toDate(rowValue);
+            const d2 = toDate(value);
+            return !!(d1 && d2 && d1.getTime() >= d2.getTime());
+        }
+        case 'dateOnOrBefore': {
+            const d1 = toDate(rowValue);
+            const d2 = toDate(value);
+            return !!(d1 && d2 && d1.getTime() <= d2.getTime());
+        }
+        case 'nowAfterPlusMinutes': {
+            // value: number (分鐘)
+            if (typeof value !== 'number') return false;
+            const base = toDate(rowValue);
+            if (!base) return false;
+            const compareTs = base.getTime() + value * 60_000;
+            return Date.now() > compareTs;
+        }
+        case 'nowBeforePlusMinutes': {
+            if (typeof value !== 'number') return false;
+            const base = toDate(rowValue);
+            if (!base) return false;
+            const compareTs = base.getTime() + value * 60_000;
+            return Date.now() < compareTs;
+        }
+        // ---- 新增結束 ----
         default:
             throw new Error(`Unknown operator: ${operator}`);
     }
