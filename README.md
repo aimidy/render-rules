@@ -29,6 +29,48 @@ const row = { age: 30 };
 console.log(evaluateCondition(rule, row)); // true
 ```
 
+## Configuration Options
+
+The `evaluateCondition` function accepts an optional `options` parameter for customizing evaluation behavior:
+
+```ts
+interface EvaluateOptions {
+    treatMissingRowAsFalse?: boolean; // default: true
+    onError?: (err: Error, info: { rule: Rule | Condition; row: any }) => void;
+}
+```
+
+### `treatMissingRowAsFalse`
+
+Controls how `null` or `undefined` rows are handled:
+
+```ts
+// Default behavior (treatMissingRowAsFalse: true)
+evaluateCondition(rule, null); // false
+evaluateCondition(rule, undefined); // false
+
+// Alternative behavior (treatMissingRowAsFalse: false)
+evaluateCondition(rule, null, {}, { treatMissingRowAsFalse: false }); // true
+evaluateCondition(rule, undefined, {}, { treatMissingRowAsFalse: false }); // true
+```
+
+### `onError` Callback
+
+Provides custom error handling instead of throwing exceptions:
+
+```ts
+const options = {
+    onError: (error, info) => {
+        console.log('Evaluation error:', error.message);
+        console.log('Rule:', info.rule);
+        console.log('Row:', info.row);
+    },
+};
+
+// Instead of throwing, calls onError and returns false
+evaluateCondition({ field: 'x', operator: 'unknown', value: 1 }, { x: 1 }, {}, options); // false (calls onError callback)
+```
+
 ## Supported Operators
 
 | Category          | Operators                                                                                                                                  |
@@ -90,6 +132,16 @@ const groupRule = {
 };
 
 evaluateCondition(groupRule, { age: 25, status: 'active' }); // true
+
+// With error handling
+evaluateCondition(
+    groupRule,
+    { age: 25, status: 'active' },
+    {},
+    {
+        onError: (error) => console.log('Error:', error.message),
+    },
+); // true
 ```
 
 Combining `any` + `all`:
@@ -138,7 +190,7 @@ evaluateCondition(
 
 ## Error Handling
 
-Unknown operators throw an error:
+By default, unknown operators and invalid inputs throw errors:
 
 ```ts
 try {
@@ -146,6 +198,41 @@ try {
 } catch (err) {
     console.error(err); // Unknown operator: unknown
 }
+```
+
+### Custom Error Handling with `onError`
+
+Instead of throwing exceptions, you can provide an error callback:
+
+```ts
+const options = {
+    onError: (error, info) => {
+        console.log('Evaluation failed:', error.message);
+        console.log('Rule:', info.rule);
+        console.log('Row data:', info.row);
+        // Log to monitoring service, etc.
+    },
+};
+
+// Returns false instead of throwing
+evaluateCondition({ field: 'x', operator: 'unknown', value: 1 }, { x: 1 }, {}, options); // false (calls onError callback)
+
+// Also handles invalid row types
+evaluateCondition({ field: 'age', operator: 'equals', value: 30 }, 'not an object', {}, options); // false (calls onError callback)
+```
+
+### Handling Missing Rows
+
+Control how `null` or `undefined` rows are treated:
+
+```ts
+// Default: treat missing rows as false
+evaluateCondition(rule, null); // false
+evaluateCondition(rule, undefined); // false
+
+// Alternative: treat missing rows as true
+evaluateCondition(rule, null, {}, { treatMissingRowAsFalse: false }); // true
+evaluateCondition(rule, undefined, {}, { treatMissingRowAsFalse: false }); // true
 ```
 
 ## Testing

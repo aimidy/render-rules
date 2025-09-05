@@ -4,11 +4,11 @@ type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T
 export type Rule = XOR<Any, All> & { not?: boolean };
 
 export type Any = {
-    any: Rule[] | Condition[];
+    any: Array<Rule | Condition>;
 };
 
 export type All = {
-    all: Rule[] | Condition[];
+    all: Array<Rule | Condition>;
 };
 
 export type Condition = {
@@ -38,3 +38,8 @@ export type Operator =
     | 'nowBeforePlusMinutes';
 
 export type anyObject = Record<string, any>;
+
+export type EvaluateOptions = {
+    treatMissingRowAsFalse?: boolean; // default: true
+    onError?: (err: Error, info: { rule: Rule | Condition; row: any }) => void;
+};

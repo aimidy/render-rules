@@ -1,4 +1,4 @@
-import { All, Any, anyObject, Condition, Rule } from './types';
+import { All, Any, anyObject, Condition, Rule, EvaluateOptions } from './types';
 
 function toDate(input: any): Date | null {
     if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
@@ -28,7 +28,7 @@ function isAll(obj: any): obj is All {
 /**
  * Evaluates a rule or condition against a given data row (or array of rows) and context.
  *
- * - If `row` is `null` or `undefined`, returns `false`.
+ * - If `row` is `null` or `undefined`, returns `false` (unless `treatMissingRowAsFalse` is `false`).
  * - If `row` is an array, returns `true` if any row in the array satisfies the rule or condition.
  * - If `rule` is a single condition, evaluates it using `evaluateSingleCondition`.
  * - If `rule` is an "any" group, returns `true` if any sub-rule is satisfied.
@@ -38,6 +38,7 @@ function isAll(obj: any): obj is All {
  * @param rule - The rule or condition to evaluate.
  * @param row - The data object or array of objects to evaluate the rule against.
  * @param context - Optional context object for evaluation.
+ * @param options - Optional configuration for evaluation behavior.
  * @returns `true` if the rule or condition is satisfied, otherwise `false`.
  * @throws {Error} If `row` is not an object or array of objects.
  */
@@ -45,10 +46,27 @@ export function evaluateCondition(
     rule: Rule | Condition,
     row: anyObject | anyObject[],
     context = {},
+    options: EvaluateOptions = {},
 ): boolean {
-    if (row === null || row === undefined) return false;
+    const { treatMissingRowAsFalse = true, onError } = options;
 
-    if (typeof row !== 'object') throw new Error('Row must be an object or an array of objects');
+    if (row === null || row === undefined) {
+        if (treatMissingRowAsFalse) return false;
+        if (onError) {
+            onError(new Error('Row is null or undefined'), { rule, row });
+            return false;
+        }
+
+        throw new Error('Row is null or undefined');
+    }
+
+    if (typeof row !== 'object') {
+        if (onError) {
+            onError(new Error('Row must be an object or an array of objects'), { rule, row });
+            return false;
+        }
+        throw new Error('Row must be an object or an array of objects');
+    }
 
     let result: boolean;
     switch (true) {
@@ -56,13 +74,17 @@ export function evaluateCondition(
             result = false;
             break;
         case Array.isArray(row):
-            result = row.some((r) => evaluateCondition(rule, r, context));
+            result = row.some((r) => evaluateCondition(rule, r, context, options));
             break;
         case typeof row === 'object' && !Array.isArray(row):
-            result = evaluateRuleForRowObject(row, rule, context);
+            result = evaluateRuleForRowObject(row, rule, context, options);
             break;
         default:
-            result = false;
+            if (onError) {
+                onError(new Error('Row must be an object or an array of objects'), { rule, row });
+                return false;
+            }
+            throw new Error('Row must be an object or an array of objects');
     }
 
     if ('not' in rule && rule.not) return !result;
@@ -81,22 +103,32 @@ export function evaluateCondition(
  * @param row - The row object or array of row objects to evaluate the rule against.
  * @param rule - The rule or condition to evaluate.
  * @param context - Additional context that may be used during evaluation.
+ * @param options - Optional configuration for evaluation behavior.
  * @returns `true` if the rule or condition is satisfied for the given row and context, otherwise `false`.
  */
 function evaluateRuleForRowObject(
     row: anyObject | anyObject[],
     rule: Rule | Condition,
     context: anyObject,
+    options: EvaluateOptions = {},
 ): boolean {
+    const { onError } = options;
     switch (true) {
         case isCondition(rule):
-            return evaluateSingleCondition(rule, row);
+            return evaluateSingleCondition(rule, row, options);
         case isAny(rule):
-            return rule.any.some((subRule) => evaluateCondition(subRule, row, context));
+            return rule.any.some((subRule) => evaluateCondition(subRule, row, context, options));
         case isAll(rule):
-            return rule.all.every((subRule) => evaluateCondition(subRule, row, context));
+            return rule.all.every((subRule) => evaluateCondition(subRule, row, context, options));
         default:
-            return false;
+            if (onError) {
+                onError(new Error('Rule must be a condition, any group, or all group'), {
+                    rule,
+                    row,
+                });
+                return false;
+            }
+            throw new Error('Rule must be a condition, any group, or all group');
     }
 }
 
@@ -105,6 +137,7 @@ function evaluateRuleForRowObject(
  *
  * @param condition - The condition to evaluate, containing a field, operator, and value.
  * @param row - The object representing a data row to be checked against the condition.
+ * @param options - Optional configuration for evaluation behavior.
  * @returns `true` if the row satisfies the condition; otherwise, `false`.
  *
  * @throws {Error} Throws an error if the operator is unknown.
@@ -129,76 +162,90 @@ function evaluateRuleForRowObject(
  * - 'nowAfterPlusMinutes': Checks if the current time is after the field value (date) plus the condition value (minutes).
  * - 'nowBeforePlusMinutes': Checks if the current time is before the field value (date) plus the condition value (minutes).
  */
-function evaluateSingleCondition(condition: Condition, row: anyObject): boolean {
+function evaluateSingleCondition(
+    condition: Condition,
+    row: anyObject,
+    options: EvaluateOptions = {},
+): boolean {
     const { field, operator, value } = condition;
     const rowValue = row[field];
 
-    switch (operator) {
-        case 'equals':
-            return rowValue === value;
-        case 'notEquals':
-            return rowValue !== value;
-        case 'greaterThan':
-            return rowValue > value;
-        case 'lessThan':
-            return rowValue < value;
-        case 'contains':
-            return Array.isArray(rowValue) ? rowValue.includes(value) : false;
-        case 'startsWith':
-            return typeof rowValue === 'string' && rowValue.startsWith(value);
-        case 'endsWith':
-            return typeof rowValue === 'string' && rowValue.endsWith(value);
-        case 'in':
-            return Array.isArray(value) && value.includes(rowValue);
-        case 'notIn':
-            return Array.isArray(value) && !value.includes(rowValue);
-        // ---- 日期 / 時間判斷新增 ----
-        case 'dateEquals': {
-            const d1 = toDate(rowValue);
-            const d2 = toDate(value);
-            return !!(d1 && d2 && d1.getTime() === d2.getTime());
+    try {
+        switch (operator) {
+            case 'equals':
+                return rowValue === value;
+            case 'notEquals':
+                return rowValue !== value;
+            case 'greaterThan':
+                return rowValue > value;
+            case 'lessThan':
+                return rowValue < value;
+            case 'contains':
+                return Array.isArray(rowValue) ? rowValue.includes(value) : false;
+            case 'startsWith':
+                return typeof rowValue === 'string' && rowValue.startsWith(value);
+            case 'endsWith':
+                return typeof rowValue === 'string' && rowValue.endsWith(value);
+            case 'in':
+                return Array.isArray(value) && value.includes(rowValue);
+            case 'notIn':
+                return Array.isArray(value) && !value.includes(rowValue);
+            // ---- 日期 / 時間判斷新增 ----
+            case 'dateEquals': {
+                const d1 = toDate(rowValue);
+                const d2 = toDate(value);
+                return !!(d1 && d2 && d1.getTime() === d2.getTime());
+            }
+            case 'dateNotEquals': {
+                const d1 = toDate(rowValue);
+                const d2 = toDate(value);
+                return !!(d1 && d2 && d1.getTime() !== d2.getTime());
+            }
+            case 'dateAfter': {
+                const d1 = toDate(rowValue);
+                const d2 = toDate(value);
+                return !!(d1 && d2 && d1.getTime() > d2.getTime());
+            }
+            case 'dateBefore': {
+                const d1 = toDate(rowValue);
+                const d2 = toDate(value);
+                return !!(d1 && d2 && d1.getTime() < d2.getTime());
+            }
+            case 'dateOnOrAfter': {
+                const d1 = toDate(rowValue);
+                const d2 = toDate(value);
+                return !!(d1 && d2 && d1.getTime() >= d2.getTime());
+            }
+            case 'dateOnOrBefore': {
+                const d1 = toDate(rowValue);
+                const d2 = toDate(value);
+                return !!(d1 && d2 && d1.getTime() <= d2.getTime());
+            }
+            case 'nowAfterPlusMinutes': {
+                // value: number (分鐘)
+                if (typeof value !== 'number') return false;
+                const base = toDate(rowValue);
+                if (!base) return false;
+                const compareTs = base.getTime() + value * 60_000;
+                return Date.now() > compareTs;
+            }
+            case 'nowBeforePlusMinutes': {
+                if (typeof value !== 'number') return false;
+                const base = toDate(rowValue);
+                if (!base) return false;
+                const compareTs = base.getTime() + value * 60_000;
+                return Date.now() < compareTs;
+            }
+            default:
+                throw new Error(`Unknown operator: ${operator}`);
         }
-        case 'dateNotEquals': {
-            const d1 = toDate(rowValue);
-            const d2 = toDate(value);
-            return !!(d1 && d2 && d1.getTime() !== d2.getTime());
+    } catch (error) {
+        const { onError } = options;
+        if (onError) {
+            onError(error as Error, { rule: condition, row });
+            return false;
         }
-        case 'dateAfter': {
-            const d1 = toDate(rowValue);
-            const d2 = toDate(value);
-            return !!(d1 && d2 && d1.getTime() > d2.getTime());
-        }
-        case 'dateBefore': {
-            const d1 = toDate(rowValue);
-            const d2 = toDate(value);
-            return !!(d1 && d2 && d1.getTime() < d2.getTime());
-        }
-        case 'dateOnOrAfter': {
-            const d1 = toDate(rowValue);
-            const d2 = toDate(value);
-            return !!(d1 && d2 && d1.getTime() >= d2.getTime());
-        }
-        case 'dateOnOrBefore': {
-            const d1 = toDate(rowValue);
-            const d2 = toDate(value);
-            return !!(d1 && d2 && d1.getTime() <= d2.getTime());
-        }
-        case 'nowAfterPlusMinutes': {
-            // value: number (分鐘)
-            if (typeof value !== 'number') return false;
-            const base = toDate(rowValue);
-            if (!base) return false;
-            const compareTs = base.getTime() + value * 60_000;
-            return Date.now() > compareTs;
-        }
-        case 'nowBeforePlusMinutes': {
-            if (typeof value !== 'number') return false;
-            const base = toDate(rowValue);
-            if (!base) return false;
-            const compareTs = base.getTime() + value * 60_000;
-            return Date.now() < compareTs;
-        }
-        default:
-            throw new Error(`Unknown operator: ${operator}`);
+        // 如果有錯誤處理器，拋出錯誤；否則重新拋出錯誤
+        throw error;
     }
 }
