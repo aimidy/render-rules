@@ -26,7 +26,7 @@ function isAll(obj: any): obj is All {
 }
 
 /**
- * Evaluates a rule or condition against a given data row (or array of rows) and context.
+ * Evaluates a rule or condition against a given data row (or array of rows).
  *
  * - If `row` is `null` or `undefined`, returns `false` (unless `treatMissingRowAsFalse` is `false`).
  * - If `row` is an array, returns `true` if any row in the array satisfies the rule or condition.
@@ -37,7 +37,6 @@ function isAll(obj: any): obj is All {
  *
  * @param rule - The rule or condition to evaluate.
  * @param row - The data object or array of objects to evaluate the rule against.
- * @param context - Optional context object for evaluation.
  * @param options - Optional configuration for evaluation behavior.
  * @returns `true` if the rule or condition is satisfied, otherwise `false`.
  * @throws {Error} If `row` is not an object or array of objects.
@@ -45,7 +44,6 @@ function isAll(obj: any): obj is All {
 export function evaluateCondition(
     rule: Rule | Condition,
     row: anyObject | anyObject[],
-    context = {},
     options: EvaluateOptions = {},
 ): boolean {
     const { treatMissingRowAsFalse = true, onError } = options;
@@ -74,10 +72,10 @@ export function evaluateCondition(
             result = false;
             break;
         case Array.isArray(row):
-            result = row.some((r) => evaluateCondition(rule, r, context, options));
+            result = row.some((r) => evaluateCondition(rule, r, options));
             break;
         case typeof row === 'object' && !Array.isArray(row):
-            result = evaluateRuleForRowObject(row, rule, context, options);
+            result = evaluateRuleForRowObject(row, rule, options);
             break;
         default:
             if (onError) {
@@ -93,7 +91,7 @@ export function evaluateCondition(
 }
 
 /**
- * Evaluates a rule or condition against a given row object (or array of row objects) within a specific context.
+ * Evaluates a rule or condition against a given row object (or array of row objects).
  *
  * - If the rule is a single condition, it evaluates the condition directly.
  * - If the rule is an "any" group, it returns true if any sub-rule evaluates to true.
@@ -102,14 +100,12 @@ export function evaluateCondition(
  *
  * @param row - The row object or array of row objects to evaluate the rule against.
  * @param rule - The rule or condition to evaluate.
- * @param context - Additional context that may be used during evaluation.
  * @param options - Optional configuration for evaluation behavior.
- * @returns `true` if the rule or condition is satisfied for the given row and context, otherwise `false`.
+ * @returns `true` if the rule or condition is satisfied for the given row, otherwise `false`.
  */
 function evaluateRuleForRowObject(
     row: anyObject | anyObject[],
     rule: Rule | Condition,
-    context: anyObject,
     options: EvaluateOptions = {},
 ): boolean {
     const { onError } = options;
@@ -117,9 +113,9 @@ function evaluateRuleForRowObject(
         case isCondition(rule):
             return evaluateSingleCondition(rule, row, options);
         case isAny(rule):
-            return rule.any.some((subRule) => evaluateCondition(subRule, row, context, options));
+            return rule.any.some((subRule) => evaluateCondition(subRule, row, options));
         case isAll(rule):
-            return rule.all.every((subRule) => evaluateCondition(subRule, row, context, options));
+            return rule.all.every((subRule) => evaluateCondition(subRule, row, options));
         default:
             if (onError) {
                 onError(new Error('Rule must be a condition, any group, or all group'), {

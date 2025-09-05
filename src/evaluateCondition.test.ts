@@ -600,18 +600,18 @@ describe('evaluateCondition - EvaluateOptions', () => {
 
         it('treatMissingRowAsFalse: false - throws error for null/undefined when no onError', () => {
             const options = { treatMissingRowAsFalse: false };
-            expect(() => evaluateCondition(rule, null as any, {}, options)).toThrow(
+            expect(() => evaluateCondition(rule, null as any, options)).toThrow(
                 'Row is null or undefined',
             );
-            expect(() => evaluateCondition(rule, undefined as any, {}, options)).toThrow(
+            expect(() => evaluateCondition(rule, undefined as any, options)).toThrow(
                 'Row is null or undefined',
             );
         });
 
         it('treatMissingRowAsFalse: true - returns false for null/undefined', () => {
             const options = { treatMissingRowAsFalse: true };
-            expect(evaluateCondition(rule, null as any, {}, options)).toBe(false);
-            expect(evaluateCondition(rule, undefined as any, {}, options)).toBe(false);
+            expect(evaluateCondition(rule, null as any, options)).toBe(false);
+            expect(evaluateCondition(rule, undefined as any, options)).toBe(false);
         });
 
         it('treatMissingRowAsFalse: false with onError - calls onError and returns false', () => {
@@ -619,7 +619,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const options = { treatMissingRowAsFalse: false, onError };
             const rule: Condition = { field: 'age', operator: 'equals', value: 30 };
 
-            const result = evaluateCondition(rule, null as any, {}, options);
+            const result = evaluateCondition(rule, null as any, options);
 
             expect(result).toBe(false);
             expect(onError).toHaveBeenCalledTimes(1);
@@ -640,10 +640,10 @@ describe('evaluateCondition - EvaluateOptions', () => {
             };
 
             const options = { treatMissingRowAsFalse: false };
-            expect(() => evaluateCondition(complexRule, null as any, {}, options)).toThrow(
+            expect(() => evaluateCondition(complexRule, null as any, options)).toThrow(
                 'Row is null or undefined',
             );
-            expect(() => evaluateCondition(complexRule, undefined as any, {}, options)).toThrow(
+            expect(() => evaluateCondition(complexRule, undefined as any, options)).toThrow(
                 'Row is null or undefined',
             );
         });
@@ -656,7 +656,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const rule = { field: 'x', operator: 'unknown', value: 1 } as any;
             const row = { x: 1 };
 
-            const result = evaluateCondition(rule, row, {}, options);
+            const result = evaluateCondition(rule, row, options);
 
             expect(result).toBe(false);
             expect(onError).toHaveBeenCalledTimes(1);
@@ -674,7 +674,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const rule: Condition = { field: 'age', operator: 'equals', value: 30 };
             const row = 'not an object';
 
-            const result = evaluateCondition(rule, row as any, {}, options);
+            const result = evaluateCondition(rule, row as any, options);
 
             expect(result).toBe(false);
             expect(onError).toHaveBeenCalledTimes(1);
@@ -691,7 +691,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const options = { treatMissingRowAsFalse: false, onError };
             const rule: Condition = { field: 'age', operator: 'equals', value: 30 };
 
-            const result = evaluateCondition(rule, null as any, {}, options);
+            const result = evaluateCondition(rule, null as any, options);
 
             expect(result).toBe(false);
             expect(onError).toHaveBeenCalledTimes(1);
@@ -709,7 +709,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const rule = { invalid: 'structure' } as any;
             const row = { age: 30 };
 
-            const result = evaluateCondition(rule, row, {}, options);
+            const result = evaluateCondition(rule, row, options);
 
             expect(result).toBe(false);
             expect(onError).toHaveBeenCalledTimes(1);
@@ -727,7 +727,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const rule: Condition = { field: 'age', operator: 'equals', value: 30 };
             const row = 123; // invalid type
 
-            const result = evaluateCondition(rule, row as any, {}, options);
+            const result = evaluateCondition(rule, row as any, options);
 
             expect(result).toBe(false);
             expect(onError).toHaveBeenCalledTimes(1);
@@ -745,7 +745,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const rule: Condition = { field: 'age', operator: 'equals', value: 30 };
             const row = { age: 30 };
 
-            const result = evaluateCondition(rule, row, {}, options);
+            const result = evaluateCondition(rule, row, options);
 
             expect(result).toBe(true);
             expect(onError).not.toHaveBeenCalled();
@@ -762,7 +762,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             };
             const row = { age: 30 };
 
-            const result = evaluateCondition(rule, row, {}, options);
+            const result = evaluateCondition(rule, row, options);
 
             expect(result).toBe(false);
             expect(onError).toHaveBeenCalledTimes(1);
@@ -781,7 +781,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const options = { treatMissingRowAsFalse: false, onError };
             const rule: Condition = { field: 'age', operator: 'equals', value: 30 };
 
-            const result = evaluateCondition(rule, null as any, {}, options);
+            const result = evaluateCondition(rule, null as any, options);
 
             expect(result).toBe(false);
             expect(onError).toHaveBeenCalledTimes(1);
@@ -804,7 +804,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             };
             const row = { y: 2 };
 
-            const result = evaluateCondition(rule, row, {}, options);
+            const result = evaluateCondition(rule, row, options);
 
             expect(result).toBe(true); // Should be true because second condition passes
             expect(onError).toHaveBeenCalledTimes(1); // onError called for first condition error
@@ -831,8 +831,8 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const rule: Condition = { field: 'age', operator: 'equals', value: 30 };
             const row = { age: 30 };
 
-            expect(evaluateCondition(rule, row, {}, {})).toBe(true);
-            expect(evaluateCondition(rule, null as any, {}, {})).toBe(false);
+            expect(evaluateCondition(rule, row, {})).toBe(true);
+            expect(evaluateCondition(rule, null as any, {})).toBe(false);
         });
 
         it('works with partial options', () => {
@@ -841,12 +841,12 @@ describe('evaluateCondition - EvaluateOptions', () => {
 
             // Only treatMissingRowAsFalse - should throw when no onError
             expect(() =>
-                evaluateCondition(rule, null as any, {}, { treatMissingRowAsFalse: false }),
+                evaluateCondition(rule, null as any, { treatMissingRowAsFalse: false }),
             ).toThrow('Row is null or undefined');
 
             // Only onError
             const onError = jest.fn();
-            expect(evaluateCondition(rule, row, {}, { onError })).toBe(true);
+            expect(evaluateCondition(rule, row, { onError })).toBe(true);
             expect(onError).not.toHaveBeenCalled();
         });
     });
@@ -861,7 +861,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const row = { x: 1 };
 
             // Should throw because onError callback throws
-            expect(() => evaluateCondition(rule, row, {}, options)).toThrow('Callback error');
+            expect(() => evaluateCondition(rule, row, options)).toThrow('Callback error');
             expect(onError).toHaveBeenCalled();
         });
 
@@ -871,7 +871,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             const rule = { field: 'x', operator: 'unknown', value: 1 } as any;
             const row = { x: 1 };
 
-            const result = evaluateCondition(rule, row, {}, options);
+            const result = evaluateCondition(rule, row, options);
 
             expect(result).toBe(false); // Should still return false
             expect(onError).toHaveBeenCalled();
@@ -888,7 +888,7 @@ describe('evaluateCondition - EvaluateOptions', () => {
             };
             const row = { x: 1, y: 2 };
 
-            const result = evaluateCondition(rule, row, {}, options);
+            const result = evaluateCondition(rule, row, options);
 
             expect(result).toBe(false);
             // Should call onError for the first error encountered

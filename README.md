@@ -50,8 +50,8 @@ evaluateCondition(rule, null); // false
 evaluateCondition(rule, undefined); // false
 
 // Alternative behavior (treatMissingRowAsFalse: false)
-evaluateCondition(rule, null, {}, { treatMissingRowAsFalse: false }); // true
-evaluateCondition(rule, undefined, {}, { treatMissingRowAsFalse: false }); // true
+evaluateCondition(rule, null, { treatMissingRowAsFalse: false }); // true
+evaluateCondition(rule, undefined, { treatMissingRowAsFalse: false }); // true
 ```
 
 ### `onError` Callback
@@ -68,7 +68,7 @@ const options = {
 };
 
 // Instead of throwing, calls onError and returns false
-evaluateCondition({ field: 'x', operator: 'unknown', value: 1 }, { x: 1 }, {}, options); // false (calls onError callback)
+evaluateCondition({ field: 'x', operator: 'unknown', value: 1 }, { x: 1 }, options); // false (calls onError callback)
 ```
 
 ## Supported Operators
@@ -215,10 +215,10 @@ const options = {
 };
 
 // Returns false instead of throwing
-evaluateCondition({ field: 'x', operator: 'unknown', value: 1 }, { x: 1 }, {}, options); // false (calls onError callback)
+evaluateCondition({ field: 'x', operator: 'unknown', value: 1 }, { x: 1 }, options); // false (calls onError callback)
 
 // Also handles invalid row types
-evaluateCondition({ field: 'age', operator: 'equals', value: 30 }, 'not an object', {}, options); // false (calls onError callback)
+evaluateCondition({ field: 'age', operator: 'equals', value: 30 }, 'not an object', options); // false (calls onError callback)
 ```
 
 ### Handling Missing Rows
@@ -231,8 +231,8 @@ evaluateCondition(rule, null); // false
 evaluateCondition(rule, undefined); // false
 
 // Alternative: treat missing rows as true
-evaluateCondition(rule, null, {}, { treatMissingRowAsFalse: false }); // true
-evaluateCondition(rule, undefined, {}, { treatMissingRowAsFalse: false }); // true
+evaluateCondition(rule, null, { treatMissingRowAsFalse: false }); // true
+evaluateCondition(rule, undefined, { treatMissingRowAsFalse: false }); // true
 ```
 
 ## Testing
