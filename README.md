@@ -137,7 +137,6 @@ evaluateCondition(groupRule, { age: 25, status: 'active' }); // true
 evaluateCondition(
     groupRule,
     { age: 25, status: 'active' },
-    {},
     {
         onError: (error) => console.log('Error:', error.message),
     },
