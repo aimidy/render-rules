@@ -1,5 +1,9 @@
 import { All, Any, anyObject, Condition, Rule, EvaluateOptions } from './types';
 
+const EVALUATION_ERROR = Symbol('EVALUATION_ERROR');
+
+type EvaluationResult = boolean | typeof EVALUATION_ERROR;
+
 function toDate(input: any): Date | null {
     if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
     if (typeof input === 'number') {
@@ -46,6 +50,15 @@ export function evaluateCondition(
     row: anyObject | anyObject[],
     options: EvaluateOptions = {},
 ): boolean {
+    const result = evaluateConditionInternal(rule, row, options);
+    return result === EVALUATION_ERROR ? false : result;
+}
+
+function evaluateConditionInternal(
+    rule: Rule | Condition,
+    row: anyObject | anyObject[],
+    options: EvaluateOptions = {},
+): EvaluationResult {
     const { treatMissingRowAsFalse = true, onError } = options;
 
     if (row === null || row === undefined) {
@@ -66,14 +79,29 @@ export function evaluateCondition(
         throw new Error('Row must be an object or an array of objects');
     }
 
-    let result: boolean;
+    let result: EvaluationResult;
     switch (true) {
         case Array.isArray(row) && row.length === 0:
             result = false;
             break;
-        case Array.isArray(row):
-            result = row.some((r) => evaluateCondition(rule, r, options));
+        case Array.isArray(row): {
+            let encounteredError = false;
+            const anyMatch = row.some((r) => {
+                const subResult = evaluateConditionInternal(rule, r, options);
+                if (subResult === EVALUATION_ERROR) {
+                    encounteredError = true;
+                    return false;
+                }
+                return subResult;
+            });
+
+            if (anyMatch) {
+                result = true;
+            } else {
+                result = encounteredError ? EVALUATION_ERROR : false;
+            }
             break;
+        }
         case typeof row === 'object' && !Array.isArray(row):
             result = evaluateRuleForRowObject(row, rule, options);
             break;
@@ -84,6 +112,8 @@ export function evaluateCondition(
             }
             throw new Error('Row must be an object or an array of objects');
     }
+
+    if (result === EVALUATION_ERROR) return EVALUATION_ERROR;
 
     if ('not' in rule && rule.not) return !result;
 
@@ -107,22 +137,46 @@ function evaluateRuleForRowObject(
     row: anyObject | anyObject[],
     rule: Rule | Condition,
     options: EvaluateOptions = {},
-): boolean {
+): EvaluationResult {
     const { onError } = options;
     switch (true) {
         case isCondition(rule):
             return evaluateSingleCondition(rule, row, options);
-        case isAny(rule):
-            return rule.any.some((subRule) => evaluateCondition(subRule, row, options));
-        case isAll(rule):
-            return rule.all.every((subRule) => evaluateCondition(subRule, row, options));
+        case isAny(rule): {
+            let encounteredError = false;
+            const anyMatch = rule.any.some((subRule) => {
+                const subResult = evaluateConditionInternal(subRule, row, options);
+                if (subResult === EVALUATION_ERROR) {
+                    encounteredError = true;
+                    return false;
+                }
+                return subResult;
+            });
+
+            if (anyMatch) return true;
+            return encounteredError ? EVALUATION_ERROR : false;
+        }
+        case isAll(rule): {
+            let encounteredError = false;
+            const everyMatch = rule.all.every((subRule) => {
+                const subResult = evaluateConditionInternal(subRule, row, options);
+                if (subResult === EVALUATION_ERROR) {
+                    encounteredError = true;
+                    return false;
+                }
+                return subResult;
+            });
+
+            if (encounteredError) return EVALUATION_ERROR;
+            return everyMatch;
+        }
         default:
             if (onError) {
                 onError(new Error('Rule must be a condition, any group, or all group'), {
                     rule,
                     row,
                 });
-                return false;
+                return EVALUATION_ERROR;
             }
             throw new Error('Rule must be a condition, any group, or all group');
     }
@@ -162,7 +216,7 @@ function evaluateSingleCondition(
     condition: Condition,
     row: anyObject,
     options: EvaluateOptions = {},
-): boolean {
+): EvaluationResult {
     const { field, operator, value } = condition;
     const rowValue = row[field];
 
@@ -239,7 +293,7 @@ function evaluateSingleCondition(
         const { onError } = options;
         if (onError) {
             onError(error as Error, { rule: condition, row });
-            return false;
+            return EVALUATION_ERROR;
         }
         // 如果有錯誤處理器，拋出錯誤；否則重新拋出錯誤
         throw error;

@@ -739,6 +739,36 @@ describe('evaluateCondition - EvaluateOptions', () => {
             );
         });
 
+        it('does not invert result to true when negated condition triggers onError', () => {
+            const onError = jest.fn();
+            const rule = {
+                field: 'x',
+                operator: 'totally-unknown',
+                value: 1,
+                not: true,
+            } as any;
+
+            expect(evaluateCondition(rule, { x: 1 }, { onError })).toBe(false);
+            expect(onError).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not invert result to true when negated groups trigger onError', () => {
+            const onError = jest.fn();
+            const rule = {
+                not: true,
+                any: [
+                    {
+                        field: 'y',
+                        operator: 'totally-unknown',
+                        value: 2,
+                    },
+                ],
+            } as any;
+
+            expect(evaluateCondition(rule, { y: 2 }, { onError })).toBe(false);
+            expect(onError).toHaveBeenCalledTimes(1);
+        });
+
         it('does not call onError when evaluation succeeds', () => {
             const onError = jest.fn();
             const options = { onError };
