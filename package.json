@@ -27,7 +27,9 @@
         "render-rules",
         "npm",
         "aimidy",
-        "aimidy-render-rules"
+        "aimidy-render-rules",
+        "front-end",
+        "backend"
     ],
     "devDependencies": {
         "@types/jest": "^29.5.14",
